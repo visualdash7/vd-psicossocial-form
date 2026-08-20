@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Avaliação Psicossocial NR-1</title>
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--text:#172033;--muted:#667085;--line:#dfe6ef;--blue:#2563eb;--purple:#7c3aed;--navy:#0b1729;--green:#10b981}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,#eef5ff 0,#f6f8fc 260px,#f7f9fc 100%)}
+    .hidden{display:none!important}
+    .header{min-height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 max(22px,calc((100% - 820px)/2));background:var(--navy);color:#fff;box-shadow:0 5px 18px rgba(15,23,42,.10)}
+    .brand{flex:1;display:flex;justify-content:center;align-items:center}
+    .form-logo{width:215px;max-width:215px;height:58px;max-height:58px;object-fit:contain;object-position:center center;filter:brightness(0) invert(1) contrast(1.25);opacity:.98}
+    .form-secure{position:absolute;right:max(22px,calc((100% - 820px)/2));display:flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.04);font-size:9px;color:#a8b5c8}
+    .secure-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.09)}
+    .container{width:min(820px,calc(100% - 28px));margin:24px auto 50px}
+    .loading{min-height:60vh;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;font-size:13px}
+    .hero{position:relative;overflow:hidden;margin-bottom:16px;padding:22px 24px 20px;border:1px solid #dce6f3;border-radius:18px;background:radial-gradient(circle at 88% 14%,rgba(124,58,237,.12),transparent 32%),radial-gradient(circle at 8% 8%,rgba(37,99,235,.10),transparent 32%),linear-gradient(135deg,#ffffff 0%,#f9fbff 58%,#f3f7ff 100%);box-shadow:0 12px 32px rgba(15,23,42,.055)}
+    .hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#2563eb,#7c3aed,#0ea5e9)}
+    .hero-topline{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .hero-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid #d9e6f6;border-radius:999px;background:rgba(255,255,255,.88);color:#3157d5;box-shadow:0 4px 13px rgba(15,23,42,.035);font-size:9px;font-weight:800}
+    .hero-badge .dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.10)}
+    .hero-status{display:inline-flex;align-items:center;gap:6px;color:#7b8ba4;font-size:8.5px;font-weight:700;white-space:nowrap}
+    .hero-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#2563eb}
+    .hero h1{position:relative;margin:0 0 7px;max-width:680px;font-size:30px;line-height:1.08;letter-spacing:-.8px;color:#0f1f3a}
+    .hero p{position:relative;margin:0;max-width:690px;color:#66758b;font-size:12px;line-height:1.6}
+    .info{position:relative;display:flex;gap:10px;align-items:flex-start;margin:16px 0 0;padding:13px 14px;border:1px solid #d7e5f7;border-radius:12px;background:linear-gradient(135deg,#f3f8ff,#f8f7ff);color:#244a9b;font-size:11px;line-height:1.55}
+    .info-icon{flex:0 0 30px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#fff;color:#4f46e5;box-shadow:0 4px 12px rgba(79,70,229,.08)}
+    .card,.question-card{margin-bottom:12px;padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 6px 22px rgba(15,23,42,.045)}
+    .area-card{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr);gap:12px 14px;padding:16px 18px}
+    .area-card:before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,#2563eb,#7c3aed,#0ea5e9)}
+    .step-title{grid-column:1/-1;margin-bottom:0;font-size:13px;font-weight:750}
+    .field{margin:0}
+    label{display:block;margin-bottom:6px;color:#344054;font-size:11px;font-weight:650}
+    select{width:100%;height:40px;padding:0 11px;border:1px solid #dce3ec;border-radius:9px;background:#fff;font:inherit;font-size:11px;outline:none;transition:border-color .15s,box-shadow .15s}
+    select:focus{border-color:#7c83ff;box-shadow:0 0 0 3px rgba(79,70,229,.07)}
+    #role:disabled{background:#f8fafc;color:#94a3b8;cursor:not-allowed}
+    .progress-area{position:sticky;top:8px;z-index:20;margin:0 -12px 13px;padding:8px 11px;border:1px solid rgba(221,230,239,.8);border-radius:11px;background:rgba(247,249,252,.92);backdrop-filter:blur(8px);box-shadow:0 5px 18px rgba(15,23,42,.04)}
+    .progress-info{display:flex;justify-content:space-between;margin-bottom:5px;color:#64748b;font-size:9px}
+    .progress{height:7px;overflow:hidden;border-radius:999px;background:#e4e9f0}
+    .progress div{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--purple));transition:.2s}
+    .question-card{position:relative;padding:14px 17px;margin-bottom:9px;border-radius:13px;content-visibility:auto;contain-intrinsic-size:150px;transition:transform .16s,border-color .16s,box-shadow .16s}
+    .question-card:hover{transform:translateY(-1px);border-color:#ccd9ea;box-shadow:0 9px 25px rgba(15,23,42,.06)}
+    .question-card:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#2563eb,#7c3aed);opacity:.72}
+    .dimension{margin-bottom:5px;color:var(--blue);font-size:9px;font-weight:800;letter-spacing:.75px;text-transform:uppercase}
+    .question{margin-bottom:11px;color:#24324b;font-size:12.5px;line-height:1.5;font-weight:650}
+    .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+    .scale label{margin:0}.scale input{display:none}
+    .option{min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #e1e7ef;border-radius:9px;color:#64748b;background:#fafcff;cursor:pointer;transition:transform .14s,border-color .14s,background .14s,box-shadow .14s;will-change:transform}
+    .option strong{font-size:13px}.option span{margin-top:2px;font-size:7.5px}
+    .option:hover{transform:translateY(-1px);border-color:#c9d5e7;background:#fff;box-shadow:0 5px 14px rgba(15,23,42,.045)}
+    .scale input:checked+.option{color:#fff;border-color:#4f46e5;background:linear-gradient(135deg,var(--blue),#6d4df5);box-shadow:0 8px 18px rgba(79,70,229,.18);transform:translateY(-1px)}
+    .submit{width:100%;height:47px;margin-top:7px;border:0;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:12px;color:#fff;font-size:13px;font-weight:750;background:linear-gradient(135deg,var(--blue),#6d4df5);box-shadow:0 10px 24px rgba(79,70,229,.20);cursor:pointer;transition:.18s}
+    .submit:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(79,70,229,.27)}
+    .submit:disabled{opacity:.65;cursor:not-allowed;transform:none}
+    .submit b{font-size:18px;transition:transform .18s}.submit:hover b{transform:translateX(4px)}
+    .success{margin-top:60px;padding:35px 20px;text-align:center;border:1px solid var(--line);border-radius:16px;background:#fff}
+    .success-icon{width:55px;height:55px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#ecfdf5;color:#059669;font-size:23px}
+    .success h2{margin:0 0 7px}.success p{margin:0;color:#667085;font-size:12px}
+    @media(max-width:680px){
+      body{background:linear-gradient(180deg,#eaf3ff 0,#f4f7fb 250px,#f7f9fc 100%)}
+      .header{min-height:66px;padding:0 14px}
+      .form-logo{width:178px;max-width:178px;height:50px}
+      .form-secure{display:none}
+      .container{width:calc(100% - 18px);margin-top:18px}
+      .hero{padding:18px 16px 16px;border-radius:16px}
+      .hero-topline{align-items:flex-start;flex-direction:column;gap:8px;margin-bottom:13px}
+      .hero h1{font-size:25px;line-height:1.12}
+      .hero p{font-size:11px}
+      .area-card{grid-template-columns:1fr}
+      .step-title{grid-column:auto}
+      .question-card{padding:13px 12px 13px 15px}
+      .scale{gap:4px}
+      .option{min-height:49px}
+      .option span{font-size:6.8px}
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <img class="form-logo" src="https://i.imgur.com/mmSC32U.png" alt="VD Psicossocial">
+    </div>
+    <div class="form-secure"><span class="secure-dot"></span>Avaliação segura</div>
+  </header>
+
+  <main class="container">
+    <div id="loading" class="loading">Carregando avaliação...</div>
+
+    <div id="formArea" class="hidden">
+      <div class="hero">
+        <div class="hero-topline">
+          <div class="hero-badge"><span class="dot"></span>Avaliação Psicossocial NR-1</div>
+          <div class="hero-status">Questionário anônimo</div>
+        </div>
+
+        <h1 id="campaignTitle">Avaliação Psicossocial</h1>
+        <p id="campaignDescription"></p>
+
+        <div class="info">
+          <span class="info-icon">◈</span>
+          <div>
+            <strong>Privacidade das respostas</strong><br>
+            Esta avaliação é anônima. A classificação gerencial só é liberada quando o grupo alcança o mínimo de respostas definido para a campanha.
+          </div>
+        </div>
+      </div>
+
+      <div class="card area-card">
+        <div class="step-title">Informações da sua área</div>
+
+        <div class="field">
+          <label for="sector">Setor</label>
+          <select id="sector" onchange="filterRolesBySector()">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="role">Função</label>
+          <select id="role" disabled>
+            <option value="">Selecione primeiro o setor</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="shift">Turno</label>
+          <select id="shift">
+            <option value="">Selecione...</option>
+            <option>Administrativo</option>
+            <option>Manhã</option>
+            <option>Tarde</option>
+            <option>Noite</option>
+            <option>Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="progress-area">
+        <div class="progress-info">
+          <span>Progresso</span>
+          <span id="progressText">0%</span>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+      </div>
+
+      <form id="assessmentForm" onsubmit="submitForm(event)">
+        <div id="questions"></div>
+        <button id="submitButton" class="submit" type="submit">
+          <span>Enviar avaliação</span><b>→</b>
+        </button>
+      </form>
+    </div>
+
+    <div id="unavailable" class="success hidden">
+      <div class="success-icon">!</div>
+      <h2>Avaliação indisponível</h2>
+      <p id="unavailableText"></p>
+    </div>
+
+    <div id="success" class="success hidden">
+      <div class="success-icon">✓</div>
+      <h2>Resposta enviada</h2>
+      <p>Obrigado por participar desta avaliação.</p>
+    </div>
+  </main>
+
+  <script>
+    let data = null;
+
+    const params = new URLSearchParams(window.location.search);
+    const FORM_TOKEN = params.get('form') || params.get('token') || '';
+
+    document.addEventListener('DOMContentLoaded', loadForm);
+
+    async function apiRequest(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {})
+        }
+      });
+
+      let body = null;
+      try { body = await response.json(); } catch (_) {}
+
+      if (!response.ok) {
+        throw new Error(body?.message || 'Não foi possível concluir a operação.');
+      }
+
+      return body;
+    }
+
+    async function loadForm() {
+      try {
+        if (!FORM_TOKEN) {
+          throw new Error('Link da avaliação inválido ou incompleto.');
+        }
+
+        data = await apiRequest('/api/campaign?token=' + encodeURIComponent(FORM_TOKEN));
+
+        document.getElementById('loading').classList.add('hidden');
+
+        if (!data.available) {
+          document.getElementById('unavailable').classList.remove('hidden');
+          document.getElementById('unavailableText').textContent =
+            data.message || 'Avaliação indisponível.';
+          return;
+        }
+
+        document.getElementById('formArea').classList.remove('hidden');
+        document.getElementById('campaignTitle').textContent = data.campaign.title;
+        document.getElementById('campaignDescription').textContent =
+          data.campaign.description || 'Responda todas as questões com atenção.';
+
+        fillSelect('sector', data.setores || []);
+        filterRolesBySector();
+        renderQuestions();
+
+      } catch (error) {
+        document.getElementById('loading').innerHTML =
+          'Não foi possível carregar esta avaliação.<br>' + escapeHtml(error.message);
+      }
+    }
+
+    function fillSelect(id, items) {
+      const el = document.getElementById(id);
+
+      items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        el.appendChild(option);
+      });
+    }
+
+    function filterRolesBySector() {
+      const sectorId = document.getElementById('sector').value;
+      const role = document.getElementById('role');
+
+      role.innerHTML = '';
+
+      if (!sectorId) {
+        role.disabled = true;
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Selecione primeiro o setor';
+        role.appendChild(option);
+        return;
+      }
+
+      const available = (data.funcoes || [])
+        .filter(item =>
+          Array.isArray(item.sectorIds) &&
+          item.sectorIds.includes(sectorId)
+        )
+        .sort((a, b) =>
+          String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR')
+        );
+
+      const first = document.createElement('option');
+      first.value = '';
+      first.textContent = available.length
+        ? 'Selecione...'
+        : 'Nenhuma função vinculada a este setor';
+
+      role.appendChild(first);
+      role.disabled = !available.length;
+
+      available.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        role.appendChild(option);
+      });
+    }
+
+    function renderQuestions() {
+      const scale = [
+        [1, 'Nunca'],
+        [2, 'Raramente'],
+        [3, 'Às vezes'],
+        [4, 'Frequente'],
+        [5, 'Sempre']
+      ];
+
+      document.getElementById('questions').innerHTML =
+        (data.questions || []).map((question, index) => `
+          <div class="question-card">
+            <div class="dimension">${escapeHtml(question.dimension)}</div>
+            <div class="question">${index + 1}. ${escapeHtml(question.question)}</div>
+            <div class="scale">
+              ${scale.map(option => `
+                <label>
+                  <input type="radio"
+                    name="q_${escapeHtml(question.id)}"
+                    value="${option[0]}"
+                    onchange="updateProgress()">
+                  <div class="option">
+                    <strong>${option[0]}</strong>
+                    <span>${option[1]}</span>
+                  </div>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+    }
+
+    function updateProgress() {
+      const questions = data.questions || [];
+
+      const answered = questions.filter(question =>
+        document.querySelector(`input[name="q_${CSS.escape(String(question.id))}"]:checked`)
+      ).length;
+
+      const percentage = questions.length
+        ? Math.round(answered / questions.length * 100)
+        : 0;
+
+      document.getElementById('progressText').textContent = percentage + '%';
+      document.getElementById('progressBar').style.width = percentage + '%';
+    }
+
+    async function submitForm(event) {
+      event.preventDefault();
+
+      const setorId = document.getElementById('sector').value;
+      const funcaoId = document.getElementById('role').value;
+      const turno = document.getElementById('shift').value;
+
+      if (!setorId || !funcaoId) {
+        alert('Selecione seu setor e sua função.');
+        return;
+      }
+
+      const answers = [];
+
+      for (const question of data.questions || []) {
+        const selected = document.querySelector(
+          `input[name="q_${CSS.escape(String(question.id))}"]:checked`
+        );
+
+        if (!selected) {
+          alert('Responda todas as perguntas antes de finalizar.');
+          return;
+        }
+
+        answers.push({
+          questionId: question.id,
+          value: Number(selected.value)
+        });
+      }
+
+      const button = document.getElementById('submitButton');
+      button.disabled = true;
+      button.innerHTML = '<span>Enviando...</span>';
+
+      try {
+        await apiRequest('/api/respond', {
+          method: 'POST',
+          body: JSON.stringify({
+            token: FORM_TOKEN,
+            payload: { setorId, funcaoId, turno, answers }
+          })
+        });
+
+        document.getElementById('formArea').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.innerHTML = '<span>Enviar avaliação</span><b>→</b>';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

@@ -3,6 +3,13 @@
  * Cloudflare Pages Function
  *
  * POST /api/respond
+ *
+ * Faz a ponte:
+ * Formulário Cloudflare
+ *        ↓
+ * Apps Script
+ *        ↓
+ * Google Sheets
  */
 
 const APPS_SCRIPT_URL =
@@ -11,6 +18,7 @@ const APPS_SCRIPT_URL =
 const MAX_BODY_BYTES =
   50 * 1024;
 
+
 export async function onRequestPost(context) {
 
   try {
@@ -18,6 +26,11 @@ export async function onRequestPost(context) {
     const { request, env } = context;
 
 
+    /**
+     * ==========================================================
+     * CHAVE PRIVADA
+     * ==========================================================
+     */
     const apiKey =
       String(
         env.PUBLIC_API_KEY ||
@@ -41,6 +54,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * LIMITE DE TAMANHO DA REQUISIÇÃO
+     * ==========================================================
+     */
     const contentLength =
       Number(
         request.headers.get(
@@ -65,6 +83,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * LEITURA DO JSON
+     * ==========================================================
+     */
     let body;
 
     try {
@@ -86,8 +109,7 @@ export async function onRequestPost(context) {
 
     if (
       !body ||
-      typeof body !==
-        'object' ||
+      typeof body !== 'object' ||
       Array.isArray(body)
     ) {
 
@@ -101,6 +123,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * TOKEN
+     * ==========================================================
+     */
     const token =
       String(
         body.token ||
@@ -108,7 +135,11 @@ export async function onRequestPost(context) {
       ).trim();
 
 
-    if (!isValidToken(token)) {
+    if (
+      !isValidToken(
+        token
+      )
+    ) {
 
       return jsonResponse(
         {
@@ -120,14 +151,18 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * PAYLOAD
+     * ==========================================================
+     */
     const payload =
       body.payload;
 
 
     if (
       !payload ||
-      typeof payload !==
-        'object' ||
+      typeof payload !== 'object' ||
       Array.isArray(payload)
     ) {
 
@@ -141,6 +176,14 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * RESPOSTAS
+     *
+     * Mantemos o formato ORIGINAL enviado pelo formulário.
+     * A validação detalhada fica no Apps Script.
+     * ==========================================================
+     */
     const answers =
       Array.isArray(
         payload.answers
@@ -168,48 +211,23 @@ export async function onRequestPost(context) {
 
 
     /**
-     * Cada resposta deve estar
-     * entre 1 e 5.
+     * ==========================================================
+     * DADOS ORGANIZACIONAIS
+     * ==========================================================
      */
-    const validAnswers =
-      answers.every(
-        value => {
-
-          const n =
-            Number(value);
-
-          return (
-            Number.isInteger(n) &&
-            n >= 1 &&
-            n <= 5
-          );
-        }
-      );
-
-
-    if (!validAnswers) {
-
-      return jsonResponse(
-        {
-          message:
-            'Uma ou mais respostas são inválidas.'
-        },
-        400
-      );
-    }
-
-
     const sectorId =
       String(
         payload.setorId ||
         ''
       ).trim();
 
+
     const roleId =
       String(
         payload.funcaoId ||
         ''
       ).trim();
+
 
     const shift =
       String(
@@ -234,6 +252,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * CORPO ENVIADO AO APPS SCRIPT
+     * ==========================================================
+     */
     const appsScriptBody = {
 
       key:
@@ -246,6 +269,7 @@ export async function onRequestPost(context) {
         token,
 
       payload: {
+
         setorId:
           sectorId,
 
@@ -255,12 +279,23 @@ export async function onRequestPost(context) {
         turno:
           shift,
 
+        /**
+         * IMPORTANTE:
+         * Não converter com map(Number).
+         * Mantém exatamente a estrutura
+         * gerada pelo formulário.
+         */
         answers:
-          answers.map(Number)
+          answers
       }
     };
 
 
+    /**
+     * ==========================================================
+     * CLOUDFLARE → APPS SCRIPT
+     * ==========================================================
+     */
     const response =
       await fetch(
         APPS_SCRIPT_URL,
@@ -272,10 +307,16 @@ export async function onRequestPost(context) {
             'follow',
 
           headers: {
+
+            /**
+             * Mantemos text/plain para evitar
+             * problemas de preflight/CORS
+             * com o Apps Script.
+             */
             'Content-Type':
               'text/plain;charset=UTF-8',
 
-            Accept:
+            'Accept':
               'application/json'
           },
 
@@ -287,7 +328,14 @@ export async function onRequestPost(context) {
       );
 
 
-    if (!response.ok) {
+    /**
+     * ==========================================================
+     * STATUS HTTP
+     * ==========================================================
+     */
+    if (
+      !response.ok
+    ) {
 
       console.error(
         'Apps Script status:',
@@ -304,6 +352,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * RESPOSTA DO APPS SCRIPT
+     * ==========================================================
+     */
     const responseText =
       await response.text();
 
@@ -320,9 +373,9 @@ export async function onRequestPost(context) {
     } catch (error) {
 
       /**
-       * Não gravamos o HTML completo
-       * recebido para evitar logs
-       * excessivos ou exposição desnecessária.
+       * Não registramos o HTML completo
+       * recebido para evitar exposição
+       * desnecessária em logs.
        */
       console.error(
         'Apps Script retornou conteúdo não JSON.'
@@ -338,7 +391,14 @@ export async function onRequestPost(context) {
     }
 
 
-    if (!result?.success) {
+    /**
+     * ==========================================================
+     * ERRO RETORNADO PELO BACKEND
+     * ==========================================================
+     */
+    if (
+      !result?.success
+    ) {
 
       return jsonResponse(
         {
@@ -351,6 +411,11 @@ export async function onRequestPost(context) {
     }
 
 
+    /**
+     * ==========================================================
+     * SUCESSO
+     * ==========================================================
+     */
     return jsonResponse(
       result.data || {
         success:
@@ -383,6 +448,13 @@ export async function onRequestPost(context) {
 }
 
 
+/**
+ * ============================================================
+ * VALIDAÇÃO DO TOKEN
+ *
+ * Os tokens atuais possuem 40 caracteres hexadecimais.
+ * ============================================================
+ */
 function isValidToken(token) {
 
   return /^[a-f0-9]{40}$/i.test(
@@ -394,17 +466,25 @@ function isValidToken(token) {
 }
 
 
+/**
+ * ============================================================
+ * RESPOSTA JSON
+ * ============================================================
+ */
 function jsonResponse(
   data,
   status = 200
 ) {
 
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify(
+      data
+    ),
     {
       status,
 
       headers: {
+
         'Content-Type':
           'application/json; charset=UTF-8',
 

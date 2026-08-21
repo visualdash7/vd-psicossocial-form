@@ -3,14 +3,13 @@
  * Cloudflare Pages Function
  *
  * POST /api/respond
- *
- * Faz a ponte:
- * Formulário Cloudflare
- *        ↓
- * Apps Script
- *        ↓
- * Google Sheets
  */
+
+const APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbzqP6QTSsQbuAO6-JpUKIbSVKeVZNELHkLCdly5ydXmSceLlWNZH-9qPce1a--8e0om/exec';
+
+const MAX_BODY_BYTES =
+  50 * 1024;
 
 export async function onRequestPost(context) {
 
@@ -19,25 +18,53 @@ export async function onRequestPost(context) {
     const { request, env } = context;
 
 
-    /**
-     * Chave privada armazenada
-     * nas variáveis do Cloudflare.
-     */
     const apiKey =
-      env.PUBLIC_API_KEY;
+      String(
+        env.PUBLIC_API_KEY ||
+        ''
+      ).trim();
 
 
     if (!apiKey) {
 
-      throw new Error(
-        'PUBLIC_API_KEY não configurada no Cloudflare.'
+      console.error(
+        'PUBLIC_API_KEY ausente.'
+      );
+
+      return jsonResponse(
+        {
+          message:
+            'Serviço temporariamente indisponível.'
+        },
+        503
       );
     }
 
 
-    /**
-     * Recebe os dados enviados pelo formulário.
-     */
+    const contentLength =
+      Number(
+        request.headers.get(
+          'content-length'
+        ) ||
+        0
+      );
+
+
+    if (
+      contentLength >
+      MAX_BODY_BYTES
+    ) {
+
+      return jsonResponse(
+        {
+          message:
+            'Dados da avaliação excedem o limite permitido.'
+        },
+        413
+      );
+    }
+
+
     let body;
 
     try {
@@ -57,25 +84,83 @@ export async function onRequestPost(context) {
     }
 
 
-    const token =
-      String(
-        body.token ||
-        ''
-      )
-      .trim();
-
-
-    const payload =
-      body.payload ||
-      {};
-
-
-    if (!token) {
+    if (
+      !body ||
+      typeof body !==
+        'object' ||
+      Array.isArray(body)
+    ) {
 
       return jsonResponse(
         {
           message:
-            'Token da avaliação não informado.'
+            'Dados da avaliação inválidos.'
+        },
+        400
+      );
+    }
+
+
+    const token =
+      String(
+        body.token ||
+        ''
+      ).trim();
+
+
+    if (!isValidToken(token)) {
+
+      return jsonResponse(
+        {
+          message:
+            'Link da avaliação inválido ou incompleto.'
+        },
+        400
+      );
+    }
+
+
+    const payload =
+      body.payload;
+
+
+    if (
+      !payload ||
+      typeof payload !==
+        'object' ||
+      Array.isArray(payload)
+    ) {
+
+      return jsonResponse(
+        {
+          message:
+            'Dados da avaliação inválidos.'
+        },
+        400
+      );
+    }
+
+
+    const answers =
+      Array.isArray(
+        payload.answers
+      )
+        ? payload.answers
+        : [];
+
+
+    /**
+     * Hoje o formulário possui 30 perguntas.
+     */
+    if (
+      answers.length !==
+      30
+    ) {
+
+      return jsonResponse(
+        {
+          message:
+            'Responda todas as perguntas.'
         },
         400
       );
@@ -83,17 +168,72 @@ export async function onRequestPost(context) {
 
 
     /**
-     * URL atual do Web App
-     * do Gestão NR-1.
+     * Cada resposta deve estar
+     * entre 1 e 5.
      */
-    const appsScriptUrl =
-      'https://script.google.com/macros/s/AKfycbzqP6QTSsQbuAO6-JpUKIbSVKeVZNELHkLCdly5ydXmSceLlWNZH-9qPce1a--8e0om/exec';
+    const validAnswers =
+      answers.every(
+        value => {
+
+          const n =
+            Number(value);
+
+          return (
+            Number.isInteger(n) &&
+            n >= 1 &&
+            n <= 5
+          );
+        }
+      );
 
 
-    /**
-     * Corpo que será enviado
-     * ao Apps Script.
-     */
+    if (!validAnswers) {
+
+      return jsonResponse(
+        {
+          message:
+            'Uma ou mais respostas são inválidas.'
+        },
+        400
+      );
+    }
+
+
+    const sectorId =
+      String(
+        payload.setorId ||
+        ''
+      ).trim();
+
+    const roleId =
+      String(
+        payload.funcaoId ||
+        ''
+      ).trim();
+
+    const shift =
+      String(
+        payload.turno ||
+        ''
+      ).trim();
+
+
+    if (
+      !sectorId ||
+      !roleId ||
+      !shift
+    ) {
+
+      return jsonResponse(
+        {
+          message:
+            'Informe setor, função e turno.'
+        },
+        400
+      );
+    }
+
+
     const appsScriptBody = {
 
       key:
@@ -105,17 +245,25 @@ export async function onRequestPost(context) {
       token:
         token,
 
-      payload:
-        payload
+      payload: {
+        setorId:
+          sectorId,
+
+        funcaoId:
+          roleId,
+
+        turno:
+          shift,
+
+        answers:
+          answers.map(Number)
+      }
     };
 
 
-    /**
-     * Cloudflare → Apps Script
-     */
     const response =
       await fetch(
-        appsScriptUrl,
+        APPS_SCRIPT_URL,
         {
           method:
             'POST',
@@ -124,11 +272,10 @@ export async function onRequestPost(context) {
             'follow',
 
           headers: {
-
             'Content-Type':
               'text/plain;charset=UTF-8',
 
-            'Accept':
+            Accept:
               'application/json'
           },
 
@@ -142,18 +289,21 @@ export async function onRequestPost(context) {
 
     if (!response.ok) {
 
-      throw new Error(
-        'O servidor da avaliação não respondeu corretamente.'
+      console.error(
+        'Apps Script status:',
+        response.status
+      );
+
+      return jsonResponse(
+        {
+          message:
+            'Não foi possível concluir a operação.'
+        },
+        502
       );
     }
 
 
-    /**
-     * Lê primeiro como texto.
-     *
-     * Isso facilita identificar eventual
-     * resposta HTML do Google.
-     */
     const responseText =
       await response.text();
 
@@ -169,27 +319,31 @@ export async function onRequestPost(context) {
 
     } catch (error) {
 
+      /**
+       * Não gravamos o HTML completo
+       * recebido para evitar logs
+       * excessivos ou exposição desnecessária.
+       */
       console.error(
-        'Resposta inesperada do Apps Script:',
-        responseText
+        'Apps Script retornou conteúdo não JSON.'
       );
-
-      throw new Error(
-        'O servidor retornou uma resposta inválida.'
-      );
-    }
-
-
-    /**
-     * Resultado enviado pelo doPost()
-     * do Apps Script.
-     */
-    if (!result.success) {
 
       return jsonResponse(
         {
           message:
-            result.message ||
+            'Não foi possível concluir a operação.'
+        },
+        502
+      );
+    }
+
+
+    if (!result?.success) {
+
+      return jsonResponse(
+        {
+          message:
+            result?.message ||
             'Não foi possível salvar a avaliação.'
         },
         400
@@ -197,12 +351,11 @@ export async function onRequestPost(context) {
     }
 
 
-    /**
-     * Tudo certo.
-     */
     return jsonResponse(
       result.data || {
-        success: true,
+        success:
+          true,
+
         message:
           'Avaliação enviada com sucesso.'
       },
@@ -214,6 +367,7 @@ export async function onRequestPost(context) {
 
     console.error(
       'respond.js:',
+      error?.message ||
       error
     );
 
@@ -221,7 +375,6 @@ export async function onRequestPost(context) {
     return jsonResponse(
       {
         message:
-          error.message ||
           'Não foi possível concluir a operação.'
       },
       500
@@ -230,29 +383,36 @@ export async function onRequestPost(context) {
 }
 
 
+function isValidToken(token) {
 
-/**
- * Resposta JSON padronizada.
- */
+  return /^[a-f0-9]{40}$/i.test(
+    String(
+      token ||
+      ''
+    )
+  );
+}
+
+
 function jsonResponse(
   data,
   status = 200
 ) {
 
   return new Response(
-    JSON.stringify(
-      data
-    ),
+    JSON.stringify(data),
     {
       status,
 
       headers: {
-
         'Content-Type':
           'application/json; charset=UTF-8',
 
         'Cache-Control':
-          'no-store'
+          'no-store',
+
+        'X-Content-Type-Options':
+          'nosniff'
       }
     }
   );

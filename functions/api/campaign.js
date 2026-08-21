@@ -2,15 +2,11 @@
  * VD PSICOSSOCIAL
  * Cloudflare Pages Function
  *
- * GET /api/campaign?token=TOKEN_DA_CAMPANHA
- *
- * Faz a ponte:
- * Formulário Cloudflare
- *        ↓
- * Apps Script
- *        ↓
- * Google Sheets
+ * GET /api/campaign?token=TOKEN
  */
+
+const APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbzqP6QTSsQbuAO6-JpUKIbSVKeVZNELHkLCdly5ydXmSceLlWNZH-9qPce1a--8e0om/exec';
 
 export async function onRequestGet(context) {
 
@@ -28,55 +24,44 @@ export async function onRequestGet(context) {
       ).trim();
 
 
-    /**
-     * Verifica se veio o token da campanha.
-     */
-    if (!token) {
+    if (!isValidToken(token)) {
 
       return jsonResponse(
         {
           message:
-            'Token da avaliação não informado.'
+            'Link da avaliação inválido ou incompleto.'
         },
         400
       );
     }
 
 
-    /**
-     * URL do Apps Script.
-     *
-     * A URL não é segredo.
-     * A segurança ficará na PUBLIC_API_KEY.
-     */
-    const appsScriptUrl =
-      'https://script.google.com/macros/s/AKfycbzqP6QTSsQbuAO6-JpUKIbSVKeVZNELHkLCdly5ydXmSceLlWNZH-9qPce1a--8e0om/exec';
-
-
-    /**
-     * A chave será cadastrada depois
-     * nas variáveis do Cloudflare.
-     *
-     * Ela NÃO fica exposta no navegador.
-     */
     const apiKey =
-      env.PUBLIC_API_KEY;
+      String(
+        env.PUBLIC_API_KEY ||
+        ''
+      ).trim();
 
 
     if (!apiKey) {
 
-      throw new Error(
-        'PUBLIC_API_KEY não configurada no Cloudflare.'
+      console.error(
+        'PUBLIC_API_KEY ausente.'
+      );
+
+      return jsonResponse(
+        {
+          message:
+            'Serviço temporariamente indisponível.'
+        },
+        503
       );
     }
 
 
-    /**
-     * Monta a chamada para o Apps Script.
-     */
     const endpoint =
       new URL(
-        appsScriptUrl
+        APPS_SCRIPT_URL
       );
 
 
@@ -85,12 +70,10 @@ export async function onRequestGet(context) {
       'campaign'
     );
 
-
     endpoint.searchParams.set(
       'token',
       token
     );
-
 
     endpoint.searchParams.set(
       'key',
@@ -98,20 +81,18 @@ export async function onRequestGet(context) {
     );
 
 
-    /**
-     * Cloudflare → Apps Script
-     */
     const response =
       await fetch(
         endpoint.toString(),
         {
-          method: 'GET',
+          method:
+            'GET',
 
           redirect:
             'follow',
 
           headers: {
-            'Accept':
+            Accept:
               'application/json'
           }
         }
@@ -120,30 +101,50 @@ export async function onRequestGet(context) {
 
     if (!response.ok) {
 
-      throw new Error(
-        'O servidor da avaliação não respondeu corretamente.'
+      console.error(
+        'Apps Script status:',
+        response.status
       );
-    }
-
-
-    const result =
-      await response.json();
-
-
-    /**
-     * O Apps Script retorna:
-     *
-     * {
-     *   success: true,
-     *   data: {...}
-     * }
-     */
-    if (!result.success) {
 
       return jsonResponse(
         {
           message:
-            result.message ||
+            'Não foi possível carregar esta avaliação.'
+        },
+        502
+      );
+    }
+
+
+    let result;
+
+    try {
+
+      result =
+        await response.json();
+
+    } catch (error) {
+
+      console.error(
+        'Resposta não JSON do Apps Script.'
+      );
+
+      return jsonResponse(
+        {
+          message:
+            'Não foi possível carregar esta avaliação.'
+        },
+        502
+      );
+    }
+
+
+    if (!result?.success) {
+
+      return jsonResponse(
+        {
+          message:
+            result?.message ||
             'Não foi possível carregar esta avaliação.'
         },
         400
@@ -151,10 +152,6 @@ export async function onRequestGet(context) {
     }
 
 
-    /**
-     * O index.html espera receber
-     * diretamente os dados da campanha.
-     */
     return jsonResponse(
       result.data,
       200
@@ -165,6 +162,7 @@ export async function onRequestGet(context) {
 
     console.error(
       'campaign.js:',
+      error?.message ||
       error
     );
 
@@ -172,8 +170,7 @@ export async function onRequestGet(context) {
     return jsonResponse(
       {
         message:
-          error.message ||
-          'Erro ao carregar a avaliação.'
+          'Não foi possível carregar esta avaliação.'
       },
       500
     );
@@ -181,19 +178,24 @@ export async function onRequestGet(context) {
 }
 
 
+function isValidToken(token) {
 
-/**
- * Resposta JSON padronizada.
- */
+  return /^[a-f0-9]{40}$/i.test(
+    String(
+      token ||
+      ''
+    )
+  );
+}
+
+
 function jsonResponse(
   data,
   status = 200
 ) {
 
   return new Response(
-    JSON.stringify(
-      data
-    ),
+    JSON.stringify(data),
     {
       status,
 
@@ -202,7 +204,10 @@ function jsonResponse(
           'application/json; charset=UTF-8',
 
         'Cache-Control':
-          'no-store'
+          'no-store',
+
+        'X-Content-Type-Options':
+          'nosniff'
       }
     }
   );
